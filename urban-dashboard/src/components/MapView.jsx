@@ -67,8 +67,18 @@ export default function MapView() {
     <>
       <div ref={mapRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }} />
 
+      {/* Parameter Model 按钮 */}
       <button
-        style={{ position: "absolute", top: 16, right: 16, zIndex: 1000, padding: "8px 12px", background: "#fff", border: "1px solid #ccc", cursor: "pointer" }}
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          zIndex: 2000,
+          padding: "8px 12px",
+          background: "#fff",
+          border: "1px solid #ccc",
+          cursor: "pointer"
+        }}
         onClick={() => setActiveView("parameter")}
       >
         Parameter Model
@@ -76,4 +86,3 @@ export default function MapView() {
     </>
   );
 }
-

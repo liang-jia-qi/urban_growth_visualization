@@ -1,17 +1,15 @@
 import { useStore } from "../store";
 import CityInfoPanel from "./CityInfoPanel";
 import AnalysisPanel from "./AnalysisPanel";
-import MapView from "./MapView";
-import ParameterPage from "./ParameterPage";
 
 export default function CityDashboard() {
-  const activeView = useStore(state => state.activeView); // 🔹 修正这里
+  const activeView = useStore(state => state.activeView);
+  const clearSelectedCity = useStore(state => state.clearSelectedCity);
 
-  if (activeView === "parameter") return <ParameterPage />;
+  if (activeView === "parameter") return null; // ParameterPage 已经由 App 控制渲染
 
   return (
     <>
-      <MapView />
       <div
         style={{
           position: "absolute",
@@ -25,6 +23,26 @@ export default function CityDashboard() {
           zIndex: 10
         }}
       >
+        {/* 返回地图按钮 */}
+        <div
+          onClick={clearSelectedCity}
+          style={{
+            position: "absolute",
+            top: 12,
+            left: 12,
+            cursor: "pointer",
+            fontSize: "18px",
+            fontWeight: "bold",
+            zIndex: 20,
+            padding: "6px 10px",
+            background: "#fff",
+            border: "1px solid #ccc",
+            borderRadius: 4
+          }}
+        >
+          ← Back to Map
+        </div>
+
         <CityInfoPanel />
         <AnalysisPanel />
       </div>
