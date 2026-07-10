@@ -26,8 +26,11 @@ export default function ParameterPage() {
   // ── Display controls ─────────────────────────────────────────
   const [opacity,     setOpacity]     = useState(0.85);
   const [heightScale, setHeightScale] = useState(2.0);
-  const [showRings,   setShowRings]   = useState(true);
-  const [showFlat,    setShowFlat]    = useState(false);
+  const [showRings,     setShowRings]     = useState(true);
+  const [showOuterRing, setShowOuterRing] = useState(true);
+  const [showFlat,      setShowFlat]      = useState(false);
+  const [showBuiltFlat, setShowBuiltFlat] = useState(false);
+  const [gridSize,      setGridSize]      = useState("large"); // "small" | "large"
 
   // ── Data ─────────────────────────────────────────────────────
   const [citiesDB, setCitiesDB] = useState([]);
@@ -164,12 +167,28 @@ export default function ParameterPage() {
     renderer.setSize(w, h);
     container.appendChild(renderer.domElement);
 
+    // N and center defined first — used by camera and ground
+    const N = gridSize === "small" ? 40 : 70, size = 1, center = N / 2;
+
+    // Adaptive rMax: where ψ(r) = 0.95
+    const logit95 = Math.log(0.95 / 0.05);
+    const rMax = beta > 0.01
+      ? Math.min(12, Math.max(5, (logit95 - alpha) / beta))
+      : 10;
+
     const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 2000);
-    camera.position.set(50, 70, 70);
-    camera.lookAt(0, 0, 0);
+    if (showFlat) {
+      camera.position.set(0, center * 3.0, 0);
+      camera.up.set(0, 0, -1);
+      camera.lookAt(0, 0, 0);
+    } else {
+      camera.position.set(50, 70, 70);
+      camera.lookAt(0, 0, 0);
+    }
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
+    if (showFlat) controls.enableRotate = false;
 
     scene.add(new THREE.AmbientLight(0xffffff, 0.7));
     const sun = new THREE.DirectionalLight(0xffffff, 1.0);
@@ -179,17 +198,10 @@ export default function ParameterPage() {
     fill.position.set(-40, 30, -20);
     scene.add(fill);
 
-    // Adaptive rMax: where ψ(r) = 0.95
-    const logit95 = Math.log(0.95 / 0.05);
-    const rMax = beta > 0.01
-      ? Math.min(12, Math.max(5, (logit95 - alpha) / beta))
-      : 10;
-
-    const N = 70, size = 1, center = N / 2;
-
+    // Circular ground — matches city extent exactly, MeshBasicMaterial = truly white (unlit)
     const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(N+2, N+2),
-      new THREE.MeshStandardMaterial({ color: 0xd6dde6 })
+      new THREE.CircleGeometry(center + 0.5, 128),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
     );
     ground.rotation.x = -Math.PI / 2;
     scene.add(ground);
@@ -224,12 +236,12 @@ export default function ParameterPage() {
     const C_BUILD_L = new THREE.Color(0xD3B472); // tan/gold — building (low)
     const C_BUILD_H = new THREE.Color(0x7a5c1e); // dark gold — building (tall)
     const C_NEW     = new THREE.Color(0xe07b39); // orange — new since 2016
-    const C_BUILDABLE = 0xffffff;                // white — buildable, not built
+    const C_BUILDABLE = 0xf0f0f0;                // very light grey — buildable, not built
 
     const flatTile = (x, z, color, op) => {
       const m = new THREE.Mesh(
         new THREE.PlaneGeometry(size*0.92, size*0.92),
-        new THREE.MeshStandardMaterial({ color, transparent: true, opacity: op })
+        new THREE.MeshBasicMaterial({ color, transparent: true, opacity: op })
       );
       m.rotation.x = -Math.PI / 2;
       m.position.set(x, 0.01, z);
@@ -254,17 +266,23 @@ export default function ParameterPage() {
         const builtInCurrent = piMap[i][j] < pi(r);
 
         if (!showFlat && (builtInCurrent || builtInBase)) {
+          // 3D building (normal view)
           const Hraw  = A * Math.exp(B*r + C*r*r);
           const Hdisp = Hraw * heightScale;
           const isNew = isComparing && !builtInBase;
           const t = Hmax > Hmin ? (Hraw - Hmin) / (Hmax - Hmin) : 0.5;
           const col3 = isNew ? C_NEW.clone() : C_BUILD_L.clone().lerp(C_BUILD_H, t);
+          const sideMat = new THREE.MeshStandardMaterial({ color: col3, transparent: true, opacity });
+          const topMat  = new THREE.MeshStandardMaterial({ color: 0x91D372, transparent: true, opacity });
+          // BoxGeometry face order: +X, -X, +Y(top), -Y(bottom), +Z, -Z
           const mesh = new THREE.Mesh(
             new THREE.BoxGeometry(size*0.85, Hdisp, size*0.85),
-            new THREE.MeshStandardMaterial({ color: col3, transparent: true, opacity })
+            [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]
           );
           mesh.position.set(dx, Hdisp / 2, dz);
           scene.add(mesh);
+        } else if (showFlat && showBuiltFlat && (builtInCurrent || builtInBase)) {
+          flatTile(dx, dz, 0x91D372, 0.92); // flat view + built overlay → green
         } else {
           flatTile(dx, dz, C_BUILDABLE, 0.9);
         }
@@ -295,13 +313,25 @@ export default function ParameterPage() {
           new THREE.LineBasicMaterial({ color: RING_COLOR })
         ));
       });
+
+    }
+
+    // Outer boundary ring — separate toggle
+    if (showOuterRing) {
+      const outerPts = [];
+      for (let a = 0; a <= Math.PI*2 + 0.01; a += 0.03)
+        outerPts.push(new THREE.Vector3(Math.cos(a)*center, 0.2, Math.sin(a)*center));
+      scene.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(outerPts),
+        new THREE.LineBasicMaterial({ color: 0x000000 })
+      ));
     }
 
     let animId;
     const animate = () => { animId = requestAnimationFrame(animate); controls.update(); renderer.render(scene, camera); };
     animate();
     return () => { cancelAnimationFrame(animId); renderer.dispose(); };
-  }, [alpha, beta, kappa, delta, A, B, C, city, year, continentCity, opacity, heightScale, showRings, showFlat, zibDB]);
+  }, [alpha, beta, kappa, delta, A, B, C, city, year, continentCity, opacity, heightScale, showRings, showOuterRing, showFlat, showBuiltFlat, gridSize, zibDB]);
 
   // ── Layout ───────────────────────────────────────────────────
   const swatch = color => (
@@ -326,6 +356,19 @@ export default function ParameterPage() {
         <label>Height Scale (visual): {heightScale.toFixed(1)}×</label>
         <input type="range" min="0.5" max="5" step="0.1" value={heightScale} onChange={e => setHeightScale(+e.target.value)} style={{ width:"100%" }} />
 
+        {/* Grid size toggle */}
+        <div style={{ display:"flex", alignItems:"center", gap:8, margin:"8px 0" }}>
+          <span style={{ fontSize:12 }}>City size:</span>
+          {["small","large"].map(s => (
+            <button key={s} onClick={() => setGridSize(s)}
+              style={{ padding:"2px 10px", fontWeight: gridSize===s ? "bold" : "normal",
+                background: gridSize===s ? "#333" : "#eee", color: gridSize===s ? "#fff" : "#333",
+                border:"1px solid #aaa", borderRadius:4, cursor:"pointer", fontSize:12 }}>
+              {s.charAt(0).toUpperCase()+s.slice(1)}
+            </button>
+          ))}
+        </div>
+
         {/* Toggles */}
         <div style={{ display:"flex", flexDirection:"column", gap:4, margin:"8px 0" }}>
           <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
@@ -333,9 +376,19 @@ export default function ParameterPage() {
             Show remoteness rings &amp; city center
           </label>
           <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
-            <input type="checkbox" checked={showFlat} onChange={e => setShowFlat(e.target.checked)} />
-            Flat view — structural zero only (hide buildings)
+            <input type="checkbox" checked={showOuterRing} onChange={e => setShowOuterRing(e.target.checked)} />
+            Show outer city boundary ring
           </label>
+          <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer" }}>
+            <input type="checkbox" checked={showFlat} onChange={e => setShowFlat(e.target.checked)} />
+            Flat view — hide buildings (show ψ pattern only)
+          </label>
+          {showFlat && (
+            <label style={{ display:"flex", alignItems:"center", gap:6, cursor:"pointer", marginLeft:20 }}>
+              <input type="checkbox" checked={showBuiltFlat} onChange={e => setShowBuiltFlat(e.target.checked)} />
+              Also show built cells (green)
+            </label>
+          )}
         </div>
         <Note>
           Rings: dot = r=0 city center · inner ring = r=3 · outer ring = r=9 city fringe<br/>
