@@ -273,11 +273,9 @@ export default function ParameterPage() {
           const t = Hmax > Hmin ? (Hraw - Hmin) / (Hmax - Hmin) : 0.5;
           const col3 = isNew ? C_NEW.clone() : C_BUILD_L.clone().lerp(C_BUILD_H, t);
           const sideMat = new THREE.MeshStandardMaterial({ color: col3, transparent: true, opacity });
-          const topMat  = new THREE.MeshStandardMaterial({ color: 0x91D372, transparent: true, opacity });
-          // BoxGeometry face order: +X, -X, +Y(top), -Y(bottom), +Z, -Z
           const mesh = new THREE.Mesh(
             new THREE.BoxGeometry(size*0.85, Hdisp, size*0.85),
-            [sideMat, sideMat, topMat, sideMat, sideMat, sideMat]
+            sideMat
           );
           mesh.position.set(dx, Hdisp / 2, dz);
           scene.add(mesh);
