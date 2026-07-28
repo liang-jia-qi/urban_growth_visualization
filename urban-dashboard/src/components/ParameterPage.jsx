@@ -12,7 +12,7 @@ const Note = ({ children }) => (
 );
 
 export default function ParameterPage() {
-  const { setActiveView, selectedCity } = useStore();
+  const { setActiveTab, selectedCity } = useStore();
 
   // ── Model params ─────────────────────────────────────────────
   const [alpha, setAlpha] = useState(0.5);
@@ -64,6 +64,30 @@ export default function ParameterPage() {
       setZibDB(zib);
     });
   }, []);
+
+  // ── Link to the city selected on the Raw Images map ─────────────
+  // ParameterPage remounts fresh each time the tab is switched to, so this
+  // syncs local dropdown state from the shared store on entry (or whenever
+  // the map selection changes), defaulting to the first city if nothing has
+  // ever been selected — otherwise the 3D view starts blank.
+  useEffect(() => {
+    if (!citiesDB.length) return;
+    if (selectedCity && selectedCity.Name !== city) {
+      setContinent(selectedCity.continent || "");
+      setCity(selectedCity.Name);
+      setYear("2016");
+      applyParametersFromData(selectedCity.Name, "2016");
+    } else if (!selectedCity && !city && !continentCity) {
+      const first = citiesDB[0];
+      if (first) {
+        setContinent(first.continent || "");
+        setCity(first.Name);
+        setYear("2016");
+        applyParametersFromData(first.Name, "2016");
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCity, citiesDB]);
 
   // ── Derived options ───────────────────────────────────────────
   const continents = Array.from(new Set(citiesDB.map(d => d.continent)));
@@ -338,13 +362,13 @@ export default function ParameterPage() {
   );
 
   return (
-    <div style={{ display:"flex", gap:0, height:"100vh", overflow:"hidden" }}>
+    <div style={{ display:"flex", gap:0, height:"100%", overflow:"hidden" }}>
 
       {/* ── Left panel ── */}
       <div style={{ width:460, minWidth:460, overflowY:"auto", flexShrink:0,
         padding:"12px 16px", boxSizing:"border-box", borderRight:"1px solid #ddd", fontSize:13 }}>
 
-        <button onClick={() => setActiveView("map")}>← Back</button>
+        <button onClick={() => setActiveTab("raw")}>← Back to Raw Images</button>
         <h3 style={{ margin:"8px 0" }}>Parameter Model – {selectedCity?.Name || continentCity}</h3>
 
         {/* Display settings */}
@@ -467,7 +491,7 @@ export default function ParameterPage() {
       </div>
 
       {/* ── 3D view (no legend overlay) ── */}
-      <div style={{ flex:1, height:"100vh", position:"relative", overflow:"hidden" }}>
+      <div style={{ flex:1, height:"100%", position:"relative", overflow:"hidden" }}>
         <div ref={threeRef} style={{ width:"100%", height:"100%" }} />
       </div>
 

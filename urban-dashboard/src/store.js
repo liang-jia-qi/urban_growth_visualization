@@ -13,7 +13,8 @@ export const useStore = create((set, get) => ({
   // ======================
   selectedCity: null,
   activeYear: 2016,
-  activeView: "map", // "map" | "parameter"
+  activeView: "map", // "map" | "parameter" (legacy, kept for ParameterPage compat)
+  activeTab: "raw", // "raw" | "model"
 
   // ======================
   // setters
@@ -24,6 +25,7 @@ export const useStore = create((set, get) => ({
 
   setActiveYear: (year) => set({ activeYear: year }),
   setActiveView: (view) => set({ activeView: view }),
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
   selectCity: (city) => {
     const { zib, height } = get();
@@ -39,6 +41,8 @@ export const useStore = create((set, get) => ({
         beta: zibParams?.beta,
         kappa: zibParams?.kappa,
         delta: zibParams?.delta,
+        psi_at_center: zibParams?.psi_at_center,
+        p_at_center: zibParams?.p_at_center,
         A: heightParams?.A,
         B: heightParams?.B,
         C: heightParams?.C,
