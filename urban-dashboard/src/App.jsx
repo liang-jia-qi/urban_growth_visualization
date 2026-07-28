@@ -1,13 +1,31 @@
 import { useEffect } from "react";
 import * as d3 from "d3";
 import { useStore } from "./store";
-import MapView from "./components/MapView";
-import CityDashboard from "./components/CityDashboard";
+import RawImagesPage from "./components/RawImagesPage";
 import ParameterPage from "./components/ParameterPage";
-import "mapbox-gl/dist/mapbox-gl.css";
+
+const tabBarStyle = {
+  display: "flex",
+  gap: 8,
+  padding: "10px 16px",
+  borderBottom: "1px solid #ddd",
+  background: "#fafafa",
+};
+
+function tabButtonStyle(active) {
+  return {
+    padding: "8px 16px",
+    border: "1px solid #ccc",
+    borderRadius: 6,
+    background: active ? "#333" : "#fff",
+    color: active ? "#fff" : "#333",
+    cursor: "pointer",
+    fontWeight: active ? "bold" : "normal",
+  };
+}
 
 export default function App() {
-  const { setCities, setZib, setHeight, selectedCity, activeView } = useStore();
+  const { setCities, setZib, setHeight, activeTab, setActiveTab } = useStore();
 
   useEffect(() => {
     d3.csv("/data/CitiesDB_new.csv").then(data => {
@@ -27,6 +45,8 @@ export default function App() {
         d.beta = +d.beta;
         d.kappa = +d.kappa;
         d.delta = +d.delta;
+        d.psi_at_center = +d.psi_at_center;
+        d.p_at_center = +d.p_at_center;
       });
       setZib(data);
     });
@@ -42,12 +62,20 @@ export default function App() {
   }, []);
 
   return (
-    <>
-      {activeView === "map" && <MapView />}
-      {activeView === "parameter" && <ParameterPage />}
+    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      <div style={tabBarStyle}>
+        <button style={tabButtonStyle(activeTab === "raw")} onClick={() => setActiveTab("raw")}>
+          Raw Images & Comparison
+        </button>
+        <button style={tabButtonStyle(activeTab === "model")} onClick={() => setActiveTab("model")}>
+          City Parameter 3D Model
+        </button>
+      </div>
 
-      {/* 仅在地图视图且有选中城市时显示 CityDashboard */}
-      {activeView === "map" && selectedCity && <CityDashboard />}
-    </>
+      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+        {activeTab === "raw" && <RawImagesPage />}
+        {activeTab === "model" && <ParameterPage />}
+      </div>
+    </div>
   );
 }
