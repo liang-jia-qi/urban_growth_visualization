@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { useStore } from "./store";
 import RawImagesPage from "./components/RawImagesPage";
 import ParameterPage from "./components/ParameterPage";
+import { dataUrl } from "./dataUrl";
 
 const tabBarStyle = {
   display: "flex",
@@ -28,7 +29,7 @@ export default function App() {
   const { setCities, setZib, setHeight, activeTab, setActiveTab } = useStore();
 
   useEffect(() => {
-    d3.csv("/data/CitiesDB_new.csv").then(data => {
+    d3.csv(dataUrl("CitiesDB_new.csv")).then(data => {
       data.forEach(d => {
         d["Cx(lon)"] = +d["Cx(lon)"];
         d["Cy(lat)"] = +d["Cy(lat)"];
@@ -39,7 +40,7 @@ export default function App() {
       setCities(data);
     });
 
-    d3.csv("/data/zib_fitting_results_new.csv").then(data => {
+    d3.csv(dataUrl("zib_fitting_results_new.csv")).then(data => {
       data.forEach(d => {
         d.alpha = +d.alpha;
         d.beta = +d.beta;
@@ -51,7 +52,7 @@ export default function App() {
       setZib(data);
     });
 
-    d3.csv("/data/height_fitting_results_new.csv").then(data => {
+    d3.csv(dataUrl("height_fitting_results_new.csv")).then(data => {
       data.forEach(d => {
         d.A = +d.A;
         d.B = +d.B;

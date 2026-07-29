@@ -3,6 +3,7 @@ import { useStore } from "../store";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import * as d3 from "d3";
+import { dataUrl } from "../dataUrl";
 
 // Shared note style
 const Note = ({ children }) => (
@@ -55,9 +56,9 @@ export default function ParameterPage() {
   // ── CSV load ──────────────────────────────────────────────────
   useEffect(() => {
     Promise.all([
-      d3.csv("/data/CitiesDB_new.csv"),
-      d3.csv("/data/height_fitting_results_new.csv"),
-      d3.csv("/data/zib_fitting_results_new.csv"),
+      d3.csv(dataUrl("CitiesDB_new.csv")),
+      d3.csv(dataUrl("height_fitting_results_new.csv")),
+      d3.csv(dataUrl("zib_fitting_results_new.csv")),
     ]).then(([cities, height, zib]) => {
       setCitiesDB(cities);
       setHeightDB(height);

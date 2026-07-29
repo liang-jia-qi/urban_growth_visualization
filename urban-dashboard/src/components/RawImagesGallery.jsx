@@ -1,4 +1,5 @@
 import { useStore } from "../store";
+import { dataUrl } from "../dataUrl";
 
 export default function RawImagesGallery() {
   const { cities, selectCity } = useStore();
@@ -26,13 +27,13 @@ export default function RawImagesGallery() {
           >
             <div style={{ display: "flex", gap: 2 }}>
               <img
-                src={`/data/raw_images/${city.Name}_2016.png`}
+                src={dataUrl(`raw_images/${city.Name}_2016.png`)}
                 alt={`${city.Name} 2016`}
                 style={{ width: "50%", background: "#000", aspectRatio: "1 / 1", objectFit: "cover" }}
                 loading="lazy"
               />
               <img
-                src={`/data/raw_images/${city.Name}_2023.png`}
+                src={dataUrl(`raw_images/${city.Name}_2023.png`)}
                 alt={`${city.Name} 2023`}
                 style={{ width: "50%", background: "#000", aspectRatio: "1 / 1", objectFit: "cover" }}
                 loading="lazy"

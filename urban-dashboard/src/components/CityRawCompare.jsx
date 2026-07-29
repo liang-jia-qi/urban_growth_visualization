@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useStore } from "../store";
+import { dataUrl } from "../dataUrl";
 
 const YEAR_COLOR = { "2016": "#f93a2e", "2023": "#2ab421" };
 const RING_LEVELS = [3, 5, 9];
@@ -17,7 +18,7 @@ const TURBO_STOPS = [
 ];
 
 function imgSrc(cityName, year) {
-  return `/data/raw_images/${cityName}_${year}.png`;
+  return dataUrl(`raw_images/${cityName}_${year}.png`);
 }
 
 const logistic = x => 1 / (1 + Math.exp(-x));
@@ -104,7 +105,7 @@ export default function CityRawCompare() {
   const heightRef = useRef();
 
   useEffect(() => {
-    d3.json("/data/image_meta.json").then(setImageMeta).catch(() => setImageMeta({}));
+    d3.json(dataUrl("image_meta.json")).then(setImageMeta).catch(() => setImageMeta({}));
   }, []);
 
   const p2016 = selectedCity?.params?.["2016"] || {};
