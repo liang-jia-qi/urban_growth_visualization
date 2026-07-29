@@ -44,30 +44,67 @@ function rMaxForPop(popPersons) {
 
 /** White remoteness rings (r = 1000 * D_km / sqrt(population)), drawn to scale
  * using each city's physical extent (image_meta.json) rather than baked into
- * the raster image. */
+ * the raster image.
+ *
+ * The source raster is an equirectangular crop (equal degrees per pixel in
+ * both axes), so real-world km/pixel differs slightly between the two axes
+ * away from the equator (longitude degrees shrink by cos(lat)). A metrically
+ * "correct" ring would therefore be a very slight ellipse; we average the
+ * two axis scales instead so rings render as visually clean circles, since
+ * the distortion is small for these cities and a circle reads more clearly.
+ */
 function RemotenessRings({ meta, popPersons, size }) {
   if (!meta || !popPersons) return null;
   const sqrtPop = Math.sqrt(popPersons);
   const cx = size / 2, cy = size / 2;
-  const pxPerKmX = size / meta.total_km_x;
-  const pxPerKmY = size / meta.total_km_y;
+  const pxPerKm = size / ((meta.total_km_x + meta.total_km_y) / 2);
 
   return (
     <svg width={size} height={size} style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}>
       {RING_LEVELS.map(r => {
         const dKm = (r * sqrtPop) / 1000;
-        const rx = dKm * pxPerKmX;
-        const ry = dKm * pxPerKmY;
+        const radius = dKm * pxPerKm;
         return (
           <g key={r}>
-            <ellipse cx={cx} cy={cy} rx={rx} ry={ry} fill="none" stroke="#fff" strokeWidth={1.4} opacity={0.85} />
-            <text x={cx} y={cy - ry - 3} fill="#fff" fontSize={11} textAnchor="middle" style={{ paintOrder: "stroke", stroke: "#000", strokeWidth: 2 }}>
+            <circle cx={cx} cy={cy} r={radius} fill="none" stroke="#fff" strokeWidth={1.4} opacity={0.85} />
+            <text x={cx} y={cy - radius - 3} fill="#fff" fontSize={11} textAnchor="middle" style={{ paintOrder: "stroke", stroke: "#000", strokeWidth: 2 }}>
               r={r}
             </text>
           </g>
         );
       })}
     </svg>
+  );
+}
+
+/** Alternates between the 2016 and 2023 raw images every ~800ms (a GIF-like
+ * toggle), with remoteness rings recomputed per frame so they stay accurate
+ * to each year's population — a baked .gif couldn't do that without also
+ * duplicating the ring math in Python at generation time. */
+function AnimatedCityCompare({ cityName, meta, pop2016, pop2023, size }) {
+  const [year, setYear] = useState("2016");
+
+  useEffect(() => {
+    setYear("2016");
+    const id = setInterval(() => {
+      setYear(y => (y === "2016" ? "2023" : "2016"));
+    }, 800);
+    return () => clearInterval(id);
+  }, [cityName]);
+
+  return (
+    <div style={{ textAlign: "center" }}>
+      <div style={{ fontWeight: "bold", marginBottom: 6, color: YEAR_COLOR[year], transition: "color 0.15s" }}>{year}</div>
+      <div style={{ position: "relative", width: size, height: size, background: "#000", margin: "0 auto" }}>
+        <img
+          src={imgSrc(cityName, year)}
+          alt={`${cityName} ${year}`}
+          style={{ width: size, height: size, objectFit: "contain" }}
+          onError={e => { e.target.style.opacity = 0.15; }}
+        />
+        <RemotenessRings meta={meta} popPersons={year === "2016" ? pop2016 : pop2023} size={size} />
+      </div>
+    </div>
   );
 }
 
@@ -219,23 +256,17 @@ export default function CityRawCompare() {
       <h2 style={{ textAlign: "center" }}>{selectedCity.Name}</h2>
       <p style={{ textAlign: "center", color: "#666" }}>
         {selectedCity.Country} &middot; White rings mark remoteness r = 3, 5, 9 (r = 1000&middot;D<sub>km</sub>/&radic;population)
+        &middot; toggling 2016 &harr; 2023
       </p>
 
-      <div style={{ display: "flex", gap: 24, justifyContent: "center", flexWrap: "wrap", marginTop: 16 }}>
-        {["2016", "2023"].map(year => (
-          <div key={year} style={{ textAlign: "center" }}>
-            <div style={{ fontWeight: "bold", marginBottom: 6, color: YEAR_COLOR[year] }}>{year}</div>
-            <div style={{ position: "relative", width: IMG_SIZE, height: IMG_SIZE, background: "#000" }}>
-              <img
-                src={imgSrc(selectedCity.Name, year)}
-                alt={`${selectedCity.Name} ${year}`}
-                style={{ width: IMG_SIZE, height: IMG_SIZE, objectFit: "contain" }}
-                onError={e => { e.target.style.opacity = 0.15; }}
-              />
-              <RemotenessRings meta={meta} popPersons={year === "2016" ? pop2016 : pop2023} size={IMG_SIZE} />
-            </div>
-          </div>
-        ))}
+      <div style={{ marginTop: 16 }}>
+        <AnimatedCityCompare
+          cityName={selectedCity.Name}
+          meta={meta}
+          pop2016={pop2016}
+          pop2023={pop2023}
+          size={IMG_SIZE}
+        />
       </div>
 
       <ColorBandLegend />
