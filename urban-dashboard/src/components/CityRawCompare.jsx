@@ -6,6 +6,7 @@ import { dataUrl } from "../dataUrl";
 const YEAR_COLOR = { "2016": "#f93a2e", "2023": "#2ab421" };
 const RING_LEVELS = [3, 5, 9];
 const IMG_SIZE = 380;
+const GIF_SIZE = 260;
 
 // All raw rasters are cropped to a fixed 40km x 40km box centered on the
 // city, so the farthest cell from center (a corner) is at the half-diagonal.
@@ -256,17 +257,36 @@ export default function CityRawCompare() {
       <h2 style={{ textAlign: "center" }}>{selectedCity.Name}</h2>
       <p style={{ textAlign: "center", color: "#666" }}>
         {selectedCity.Country} &middot; White rings mark remoteness r = 3, 5, 9 (r = 1000&middot;D<sub>km</sub>/&radic;population)
-        &middot; toggling 2016 &harr; 2023
       </p>
 
-      <div style={{ marginTop: 16 }}>
-        <AnimatedCityCompare
-          cityName={selectedCity.Name}
-          meta={meta}
-          pop2016={pop2016}
-          pop2023={pop2023}
-          size={IMG_SIZE}
-        />
+      <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap", marginTop: 16, alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+          {["2016", "2023"].map(year => (
+            <div key={year} style={{ textAlign: "center" }}>
+              <div style={{ fontWeight: "bold", marginBottom: 6, color: YEAR_COLOR[year] }}>{year}</div>
+              <div style={{ position: "relative", width: IMG_SIZE, height: IMG_SIZE, background: "#000" }}>
+                <img
+                  src={imgSrc(selectedCity.Name, year)}
+                  alt={`${selectedCity.Name} ${year}`}
+                  style={{ width: IMG_SIZE, height: IMG_SIZE, objectFit: "contain" }}
+                  onError={e => { e.target.style.opacity = 0.15; }}
+                />
+                <RemotenessRings meta={meta} popPersons={year === "2016" ? pop2016 : pop2023} size={IMG_SIZE} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ borderLeft: "1px solid #eee", paddingLeft: 32 }}>
+          <div style={{ textAlign: "center", fontSize: 12, color: "#666", marginBottom: 6 }}>2016 &harr; 2023</div>
+          <AnimatedCityCompare
+            cityName={selectedCity.Name}
+            meta={meta}
+            pop2016={pop2016}
+            pop2023={pop2023}
+            size={GIF_SIZE}
+          />
+        </div>
       </div>
 
       <ColorBandLegend />
