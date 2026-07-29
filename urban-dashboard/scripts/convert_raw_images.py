@@ -60,19 +60,25 @@ def render(image_path):
         image = src.read(2)
         res_x_deg, res_y_deg = src.res
 
-    mask_zero = image == 0
-    nonzero = image[~mask_zero]
-    if nonzero.size == 0:
+    # `~(image >= 0.5)` (not `image == 0`) so NaN nodata sentinels are also
+    # masked out — any comparison with NaN is False, so NaN pixels land in
+    # the mask automatically. Feeding raw `image == 0` masking into
+    # np.percentile let stray NaNs poison vmin/vmax to NaN, blanking the
+    # entire image (e.g. Cali_2016, Karachi_2023) even though NaNs were a
+    # tiny fraction of pixels.
+    mask_bg = ~(image >= 0.5)
+    valid = image[~mask_bg]
+    if valid.size == 0:
         vmin, vmax = 0, 1
     else:
-        vmin = np.percentile(nonzero, 2)
-        vmax = np.percentile(nonzero, 98)
+        vmin = np.percentile(valid, 2)
+        vmax = np.percentile(valid, 98)
         if vmax <= vmin:
             vmax = vmin + 1
 
     norm = colors.Normalize(vmin=vmin, vmax=vmax)
-    rgba = custom_cmap(norm(image))
-    rgba[mask_zero] = [0, 0, 0, 1]
+    rgba = custom_cmap(norm(np.nan_to_num(image, nan=0.0)))
+    rgba[mask_bg] = [0, 0, 0, 1]
     rgb = (rgba[:, :, :3] * 255).astype(np.uint8)
     height_px, width_px = image.shape
     return Image.fromarray(rgb, mode="RGB"), res_x_deg, res_y_deg, width_px, height_px
