@@ -14,7 +14,7 @@ export const useStore = create((set, get) => ({
   selectedCity: null,
   activeYear: 2016,
   activeView: "map", // "map" | "parameter" (legacy, kept for ParameterPage compat)
-  activeTab: "raw", // "raw" | "model"
+  activeTab: "raw", // "raw" | "model" | "params"
 
   // ======================
   // setters

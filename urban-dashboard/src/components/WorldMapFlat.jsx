@@ -4,15 +4,10 @@ import { feature, mesh } from "topojson-client";
 import land110m from "world-atlas/land-110m.json";
 import countries110m from "world-atlas/countries-110m.json";
 import { useStore } from "../store";
+import { CONTINENT_COLOR } from "../continentColors";
 
 const WIDTH = 960;
 const HEIGHT = 480;
-
-const CONTINENT_COLOR = {
-  Africa: "#e63946",
-  Asia: "#f4c542",
-  "Latin America": "#3d7ea6",
-};
 
 export default function WorldMapFlat() {
   const svgRef = useRef();

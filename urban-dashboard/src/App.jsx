@@ -3,6 +3,7 @@ import * as d3 from "d3";
 import { useStore } from "./store";
 import RawImagesPage from "./components/RawImagesPage";
 import ParameterPage from "./components/ParameterPage";
+import ParameterSpacePage from "./components/ParameterSpacePage";
 import { dataUrl } from "./dataUrl";
 
 const tabBarStyle = {
@@ -71,11 +72,15 @@ export default function App() {
         <button style={tabButtonStyle(activeTab === "model")} onClick={() => setActiveTab("model")}>
           City Parameter 3D Model
         </button>
+        <button style={tabButtonStyle(activeTab === "params")} onClick={() => setActiveTab("params")}>
+          Parameter Space
+        </button>
       </div>
 
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         {activeTab === "raw" && <RawImagesPage />}
         {activeTab === "model" && <ParameterPage />}
+        {activeTab === "params" && <ParameterSpacePage />}
       </div>
     </div>
   );

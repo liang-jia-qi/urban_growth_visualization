@@ -6,7 +6,7 @@ import { dataUrl } from "../dataUrl";
 const YEAR_COLOR = { "2016": "#f93a2e", "2023": "#2ab421" };
 const RING_LEVELS = [3, 5, 9];
 const IMG_SIZE = 380;
-const GIF_SIZE = 260;
+const GIF_SIZE = IMG_SIZE;
 
 // All raw rasters are cropped to a fixed 40km x 40km box centered on the
 // city, so the farthest cell from center (a corner) is at the half-diagonal.
