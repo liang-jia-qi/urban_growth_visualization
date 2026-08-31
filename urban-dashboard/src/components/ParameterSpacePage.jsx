@@ -6,9 +6,14 @@ import WorldMapFlat from "./WorldMapFlat";
 
 const CONTINENTS = ["Africa", "Asia", "Latin America"];
 const YEAR_OPACITY = { "2016": 0.45, "2023": 0.9 };
-const CHART_W = 380;
-const CHART_H = 300;
-const MARGIN = { top: 36, right: 16, bottom: 44, left: 56 };
+const CHART_W = 540;
+const CHART_H = 420;
+const MARGIN = { top: 46, right: 24, bottom: 56, left: 68 };
+const POINT_R = 5;
+const POINT_R_SELECTED = 9;
+const AXIS_TICK_FONT = 13;
+const AXIS_LABEL_FONT = 14;
+const TITLE_FONT = 17;
 
 // Rule-based horizontal typology (paper thresholds: alpha=0, kappa=0 is the
 // 50% logit midpoint; beta-bar/delta-bar are pooled means across all cities
@@ -120,8 +125,10 @@ function ScatterPlot({ data, xKey, yKey, xLabel, yLabel, title, byYear, selected
     const x = d3.scaleLinear().domain([xExtent[0] - xPad, xExtent[1] + xPad]).range([MARGIN.left, CHART_W - MARGIN.right]);
     const y = d3.scaleLinear().domain([yExtent[0] - yPad, yExtent[1] + yPad]).range([CHART_H - MARGIN.bottom, MARGIN.top]);
 
-    svg.append("g").attr("transform", `translate(0,${CHART_H - MARGIN.bottom})`).call(d3.axisBottom(x).ticks(5));
-    svg.append("g").attr("transform", `translate(${MARGIN.left},0)`).call(d3.axisLeft(y).ticks(5));
+    svg.append("g").attr("transform", `translate(0,${CHART_H - MARGIN.bottom})`).call(d3.axisBottom(x).ticks(5))
+      .selectAll("text").style("font-size", `${AXIS_TICK_FONT}px`);
+    svg.append("g").attr("transform", `translate(${MARGIN.left},0)`).call(d3.axisLeft(y).ticks(5))
+      .selectAll("text").style("font-size", `${AXIS_TICK_FONT}px`);
 
     if (xExtent[0] < 0 && xExtent[1] > 0) {
       svg.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", MARGIN.top).attr("y2", CHART_H - MARGIN.bottom)
@@ -132,9 +139,9 @@ function ScatterPlot({ data, xKey, yKey, xLabel, yLabel, title, byYear, selected
         .attr("stroke", "#ccc").attr("stroke-width", 1);
     }
 
-    svg.append("text").attr("x", CHART_W / 2).attr("y", 16).attr("text-anchor", "middle").attr("font-size", 12).attr("font-weight", "bold").text(title);
-    svg.append("text").attr("x", CHART_W / 2).attr("y", CHART_H - 6).attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "#555").text(xLabel);
-    svg.append("text").attr("transform", "rotate(-90)").attr("x", -CHART_H / 2).attr("y", 14).attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "#555").text(yLabel);
+    svg.append("text").attr("x", CHART_W / 2).attr("y", 22).attr("text-anchor", "middle").attr("font-size", TITLE_FONT).attr("font-weight", "bold").text(title);
+    svg.append("text").attr("x", CHART_W / 2).attr("y", CHART_H - 10).attr("text-anchor", "middle").attr("font-size", AXIS_LABEL_FONT).attr("fill", "#555").text(xLabel);
+    svg.append("text").attr("transform", "rotate(-90)").attr("x", -CHART_H / 2).attr("y", 18).attr("text-anchor", "middle").attr("font-size", AXIS_LABEL_FONT).attr("fill", "#555").text(yLabel);
 
     // draw the selected city's points last so they sit on top
     const sorted = selectedCity ? [...data].sort((a, b) => (a.city === selectedCity ? 1 : 0) - (b.city === selectedCity ? 1 : 0)) : data;
@@ -145,11 +152,11 @@ function ScatterPlot({ data, xKey, yKey, xLabel, yLabel, title, byYear, selected
       .join("circle")
       .attr("cx", d => x(d[xKey]))
       .attr("cy", d => y(d[yKey]))
-      .attr("r", d => (d.city === selectedCity ? 6 : 3.5))
+      .attr("r", d => (d.city === selectedCity ? POINT_R_SELECTED : POINT_R))
       .attr("fill", d => CONTINENT_COLOR[d.continent] || "#888")
       .attr("fill-opacity", d => (byYear ? YEAR_OPACITY[d.year] : 0.75))
       .attr("stroke", d => (d.city === selectedCity ? "#000" : "none"))
-      .attr("stroke-width", 1.8)
+      .attr("stroke-width", 2.2)
       .style("cursor", "pointer")
       .on("click", (_, d) => setClicked(d));
   }, [data, xKey, yKey, xLabel, yLabel, title, byYear, selectedCity]);
@@ -159,7 +166,7 @@ function ScatterPlot({ data, xKey, yKey, xLabel, yLabel, title, byYear, selected
   return (
     <div style={{ textAlign: "center" }}>
       <svg ref={svgRef} />
-      <div style={{ fontSize: 11, color: "#555", minHeight: 34, maxWidth: CHART_W, margin: "2px auto 0", lineHeight: 1.4 }}>
+      <div style={{ fontSize: 14, color: "#555", minHeight: 40, maxWidth: CHART_W, margin: "4px auto 0", lineHeight: 1.5 }}>
         {clicked ? (
           <>
             <strong>{clicked.city}</strong>{clicked.year ? ` (${clicked.year})` : ""}
@@ -192,16 +199,17 @@ function BoxPlot({ groups, title, yLabel }) {
     const x = d3.scaleBand().domain(populated.map(g => g.label)).range([MARGIN.left, CHART_W - MARGIN.right]).padding(0.35);
 
     svg.append("g").attr("transform", `translate(0,${CHART_H - MARGIN.bottom})`).call(d3.axisBottom(x))
-      .selectAll("text").attr("font-size", 9).attr("transform", "rotate(-20)").attr("text-anchor", "end");
-    svg.append("g").attr("transform", `translate(${MARGIN.left},0)`).call(d3.axisLeft(y).ticks(5));
+      .selectAll("text").attr("font-size", AXIS_TICK_FONT).attr("transform", "rotate(-20)").attr("text-anchor", "end");
+    svg.append("g").attr("transform", `translate(${MARGIN.left},0)`).call(d3.axisLeft(y).ticks(5))
+      .selectAll("text").style("font-size", `${AXIS_TICK_FONT}px`);
 
     if (yExtent[0] < 0 && yExtent[1] > 0) {
       svg.append("line").attr("x1", MARGIN.left).attr("x2", CHART_W - MARGIN.right).attr("y1", y(0)).attr("y2", y(0))
         .attr("stroke", "#ccc").attr("stroke-width", 1);
     }
 
-    svg.append("text").attr("x", CHART_W / 2).attr("y", 16).attr("text-anchor", "middle").attr("font-size", 12).attr("font-weight", "bold").text(title);
-    svg.append("text").attr("transform", "rotate(-90)").attr("x", -CHART_H / 2).attr("y", 14).attr("text-anchor", "middle").attr("font-size", 10).attr("fill", "#555").text(yLabel);
+    svg.append("text").attr("x", CHART_W / 2).attr("y", 22).attr("text-anchor", "middle").attr("font-size", TITLE_FONT).attr("font-weight", "bold").text(title);
+    svg.append("text").attr("transform", "rotate(-90)").attr("x", -CHART_H / 2).attr("y", 18).attr("text-anchor", "middle").attr("font-size", AXIS_LABEL_FONT).attr("fill", "#555").text(yLabel);
 
     populated.forEach(g => {
       const sorted = [...g.values].sort(d3.ascending);
@@ -236,8 +244,8 @@ function BoxPlot({ groups, title, yLabel }) {
         .selectAll("circle")
         .data(outliers)
         .join("circle")
-        .attr("cx", cx).attr("cy", v => y(v)).attr("r", 2.5)
-        .attr("fill", "none").attr("stroke", g.color);
+        .attr("cx", cx).attr("cy", v => y(v)).attr("r", 4)
+        .attr("fill", "none").attr("stroke", g.color).attr("stroke-width", 1.6);
     });
   }, [groups, title, yLabel]);
 
@@ -246,7 +254,7 @@ function BoxPlot({ groups, title, yLabel }) {
 
 function ContinentLegend() {
   return (
-    <div style={{ display: "flex", justifyContent: "center", gap: 20, margin: "4px 0 8px", fontSize: 12, color: "#555", flexWrap: "wrap" }}>
+    <div style={{ display: "flex", justifyContent: "center", gap: 20, margin: "4px 0 8px", fontSize: 15, color: "#555", flexWrap: "wrap" }}>
       {CONTINENTS.map(name => (
         <span key={name} style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span style={{ width: 10, height: 10, borderRadius: "50%", background: CONTINENT_COLOR[name], display: "inline-block" }} />
@@ -270,7 +278,7 @@ function ContinentLegend() {
 function Badge({ text }) {
   const style = CONSTRAINT_BADGE[text] || CONSTRUCTION_BADGE[text] || { bg: "#eee", text: "#555" };
   return (
-    <span style={{ display: "inline-block", padding: "1px 8px", borderRadius: 4, fontSize: 11, fontWeight: 500, background: style.bg, color: style.text }}>
+    <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 4, fontSize: 13.5, fontWeight: 500, background: style.bg, color: style.text }}>
       {text}
     </span>
   );
@@ -279,16 +287,16 @@ function Badge({ text }) {
 function TypologyLegend({ betaBar, deltaBar }) {
   const row = { display: "flex", alignItems: "center", gap: 6, marginBottom: 3 };
   return (
-    <div style={{ maxWidth: 700, margin: "6px auto 14px", fontSize: 11.5, color: "#555" }}>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 8 }}>
+    <div style={{ maxWidth: 820, margin: "6px auto 14px", fontSize: 14, color: "#555" }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 10 }}>
         <span style={{ color: "#888", fontWeight: 500 }}>Constraint (α, β), β&#772; = {fmt(betaBar, 3)}:</span>
         {Object.keys(CONSTRAINT_BADGE).map(t => <Badge key={t} text={t} />)}
       </div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
         <span style={{ color: "#888", fontWeight: 500 }}>Construction (κ, δ), δ&#772; = {fmt(deltaBar, 3)}:</span>
         {Object.keys(CONSTRUCTION_BADGE).map(t => <Badge key={t} text={t} />)}
       </div>
-      <div style={{ marginTop: 8, fontSize: 10.5, color: "#999" }}>
+      <div style={{ marginTop: 10, fontSize: 12.5, color: "#999" }}>
         ψ(r) = logistic(α + βr) &middot; π(r) = logistic(κ &minus; δr). Thresholds: α = 0, κ = 0
         (50% at the logit midpoint); β&#772;, δ&#772; are pooled means across all cities and both years.
       </div>
@@ -299,7 +307,7 @@ function TypologyLegend({ betaBar, deltaBar }) {
 function SelectedCityCard({ selectedCity, records }) {
   if (!selectedCity) {
     return (
-      <div style={{ textAlign: "center", color: "#999", padding: "12px 0 24px" }}>
+      <div style={{ textAlign: "center", color: "#999", padding: "12px 0 24px", fontSize: 15 }}>
         Select a city on the map above to see its place in the parameter space and its typology.
       </div>
     );
@@ -308,19 +316,19 @@ function SelectedCityCard({ selectedCity, records }) {
   const own = records.filter(r => r.city === selectedCity.Name);
   if (!own.length) {
     return (
-      <div style={{ textAlign: "center", color: "#999", padding: "12px 0 24px" }}>
+      <div style={{ textAlign: "center", color: "#999", padding: "12px 0 24px", fontSize: 15 }}>
         No fitted parameters for {selectedCity.Name}.
       </div>
     );
   }
 
-  const th = { padding: "4px 10px", textAlign: "left", borderBottom: "1px solid #ccc", fontWeight: "normal", color: "#666" };
-  const td = { padding: "4px 10px", borderBottom: "1px solid #eee" };
+  const th = { padding: "6px 14px", textAlign: "left", borderBottom: "1px solid #ccc", fontWeight: "normal", color: "#666" };
+  const td = { padding: "6px 14px", borderBottom: "1px solid #eee" };
 
   return (
-    <div style={{ maxWidth: 640, margin: "12px auto 24px" }}>
-      <h4 style={{ textAlign: "center", marginBottom: 8 }}>{selectedCity.Name} &mdash; typology</h4>
-      <table style={{ borderCollapse: "collapse", margin: "0 auto", fontSize: 12.5 }}>
+    <div style={{ maxWidth: 760, margin: "12px auto 24px" }}>
+      <h4 style={{ textAlign: "center", marginBottom: 10, fontSize: 19 }}>{selectedCity.Name} &mdash; typology</h4>
+      <table style={{ borderCollapse: "collapse", margin: "0 auto", fontSize: 15 }}>
         <thead>
           <tr>
             <th style={th}>Year</th>
@@ -387,7 +395,7 @@ export default function ParameterSpacePage() {
     <div style={{ overflowY: "auto", height: "100%", background: "#fff" }}>
       <section style={{ ...section, paddingBottom: 0 }}>
         <h2 style={{ textAlign: "center" }}>Fitted Parameter Space</h2>
-        <p style={{ textAlign: "center", color: "#666", maxWidth: 700, margin: "0 auto" }}>
+        <p style={{ textAlign: "center", color: "#666", maxWidth: 760, margin: "0 auto", fontSize: 15 }}>
           Each point is one city (dot color = continent, opacity = year). Click any point for
           details. Select a city below to highlight it across every chart.
         </p>
