@@ -1,8 +1,10 @@
 """Convert per-city per-year height .tif rasters to PNGs for the web app.
 
-Reads band 2 (height) from each .tif, applies the turbo colormap with
-black-mapped zero and 2nd/98th percentile normalization (matching the
-original matplotlib visualization), and writes a plain PNG per city/year.
+Reads band 2 (height) from each .tif and colors it with a fixed 5-band
+palette (0-30m in 6m steps, values above 30m clamped to the top band's
+color), matching the discrete GEE-style legend used elsewhere for this
+project rather than a per-image percentile stretch. Pixels with no
+building (height == 0) render black. Writes a plain PNG per city/year.
 
 Also writes public/data/image_meta.json with each city's physical extent
 (km, accounting for latitude-dependent longitude shrinkage), so the web app
@@ -49,10 +51,16 @@ def load_city_lats():
     return lats
 
 
-cmap = __import__("matplotlib.pyplot", fromlist=["colormaps"]).colormaps.get_cmap("turbo")
-newcolors = cmap(np.linspace(0, 1, 256))
-newcolors[0] = [0, 0, 0, 1]
-custom_cmap = colors.ListedColormap(newcolors)
+# Fixed discrete palette — must stay in sync with HEIGHT_PALETTE /
+# HEIGHT_MAX_VAL in src/components/CityRawCompare.jsx (the legend there is
+# hand-authored to match, since it's cheaper than generating it from here).
+HEIGHT_PALETTE = ["#4a90c4", "#24bd7a", "#ffe225", "#f68838", "#ee3e32"]
+HEIGHT_MAX_VAL = 30
+
+gee_cmap = colors.ListedColormap(HEIGHT_PALETTE)
+gee_cmap.set_bad(color="black")
+bounds = np.linspace(0, HEIGHT_MAX_VAL, len(HEIGHT_PALETTE) + 1)
+height_norm = colors.BoundaryNorm(bounds, gee_cmap.N)
 
 
 def render(image_path):
@@ -60,24 +68,16 @@ def render(image_path):
         image = src.read(2)
         res_x_deg, res_y_deg = src.res
 
-    # `~(image >= 0.5)` (not `image == 0`) so NaN nodata sentinels are also
-    # masked out — any comparison with NaN is False, so NaN pixels land in
-    # the mask automatically. Feeding raw `image == 0` masking into
-    # np.percentile let stray NaNs poison vmin/vmax to NaN, blanking the
-    # entire image (e.g. Cali_2016, Karachi_2023) even though NaNs were a
-    # tiny fraction of pixels.
-    mask_bg = ~(image >= 0.5)
-    valid = image[~mask_bg]
-    if valid.size == 0:
-        vmin, vmax = 0, 1
-    else:
-        vmin = np.percentile(valid, 2)
-        vmax = np.percentile(valid, 98)
-        if vmax <= vmin:
-            vmax = vmin + 1
+    # Mask on `image == 0` (no building) same as the reference script, but
+    # also explicitly mask NaN nodata sentinels — a comparison with NaN is
+    # always False, so `image == 0` alone lets NaNs slip through as "valid"
+    # data. BoundaryNorm on a NaN then produces undefined bin assignment,
+    # which previously blanked whole images (e.g. Cali_2016, Karachi_2023)
+    # when they fed into a percentile calc; guard against the same failure
+    # mode here even though this palette is boundary-based, not percentile.
+    mask_bg = (image == 0) | np.isnan(image)
 
-    norm = colors.Normalize(vmin=vmin, vmax=vmax)
-    rgba = custom_cmap(norm(np.nan_to_num(image, nan=0.0)))
+    rgba = gee_cmap(height_norm(np.nan_to_num(image, nan=0.0)))
     rgba[mask_bg] = [0, 0, 0, 1]
     rgb = (rgba[:, :, :3] * 255).astype(np.uint8)
     height_px, width_px = image.shape
@@ -105,7 +105,12 @@ def main():
         img, res_x, res_y, width_px, height_px = render(path)
 
         thumb = img.copy()
-        thumb.thumbnail((THUMB_SIZE, THUMB_SIZE), Image.LANCZOS)
+        # NEAREST, not LANCZOS: the image is now a categorical 5-band palette
+        # (+ black), and any smooth resampling filter blends adjacent bands
+        # into invented intermediate colors that don't correspond to any
+        # real height value, undermining the whole point of a discrete
+        # legend. NEAREST keeps every pixel one of the exact palette colors.
+        thumb.thumbnail((THUMB_SIZE, THUMB_SIZE), Image.NEAREST)
         thumb.save(os.path.join(OUT_DIR, f"{city}_{year}.png"))
 
         if city not in meta:

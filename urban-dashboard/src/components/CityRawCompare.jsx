@@ -12,11 +12,12 @@ const GIF_SIZE = 260;
 // city, so the farthest cell from center (a corner) is at the half-diagonal.
 const DIAG_KM = 20 * Math.sqrt(2);
 
-const TURBO_STOPS = [
-  "#30123b", "#4145ab", "#4675ed", "#39a2fc", "#1bcfd4",
-  "#24eca6", "#61fc6c", "#a4fc3b", "#d1e834", "#f3c63a",
-  "#fb8022", "#e1421f", "#7a0403",
-];
+// Fixed 5-band building-height palette (0-30m in 6m steps; must stay in sync
+// with HEIGHT_PALETTE / HEIGHT_MAX_VAL in scripts/convert_raw_images.py).
+// Values above 30m render with the same color as the top band.
+const HEIGHT_PALETTE = ["#4a90c4", "#24bd7a", "#ffe225", "#f68838", "#ee3e32"];
+const HEIGHT_MAX_VAL = 30;
+const HEIGHT_STEP = HEIGHT_MAX_VAL / HEIGHT_PALETTE.length;
 
 function imgSrc(cityName, year) {
   return dataUrl(`raw_images/${cityName}_${year}.png`);
@@ -110,24 +111,31 @@ function AnimatedCityCompare({ cityName, meta, pop2016, pop2023, size }) {
 }
 
 function ColorBandLegend() {
+  const swatch = { width: 18, height: 14, border: "1px solid #ccc", flexShrink: 0 };
+  const row = { display: "flex", alignItems: "center", gap: 8, marginTop: 4 };
+
   return (
     <div style={{ maxWidth: 420, margin: "10px auto 0", fontSize: 11, color: "#666" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 18, height: 14, background: "#000", border: "1px solid #ccc", flexShrink: 0 }} />
-        <span>no data / not built</span>
+      <div style={{ ...row, marginTop: 0 }}>
+        <div style={{ ...swatch, background: "#000" }} />
+        <span>0m &mdash; no building</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-        <div
-          style={{
-            width: 220,
-            height: 14,
-            background: `linear-gradient(to right, ${TURBO_STOPS.join(",")})`,
-            border: "1px solid #ccc",
-            flexShrink: 0,
-          }}
-        />
-        <span>building height: low &rarr; high (per-image 2nd&ndash;98th percentile stretch)</span>
-      </div>
+      {HEIGHT_PALETTE.map((color, i) => {
+        const lo = i * HEIGHT_STEP;
+        const hi = (i + 1) * HEIGHT_STEP;
+        const isTop = i === HEIGHT_PALETTE.length - 1;
+        return (
+          <div key={color} style={row}>
+            <div style={{ ...swatch, background: color }} />
+            <span>{isTop ? `≥${lo}m` : `${lo}–${hi}m`}</span>
+          </div>
+        );
+      })}
+      <p style={{ margin: "6px 0 0", fontSize: 10.5, color: "#888" }}>
+        Building height uses a fixed color scale (0&ndash;{HEIGHT_MAX_VAL}m in {HEIGHT_STEP}m
+        bands) rather than a per-image stretch, so colors are directly comparable across
+        cities and years. Heights above {HEIGHT_MAX_VAL}m share the top band's color.
+      </p>
     </div>
   );
 }
